@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alune - AI Assistant POC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .app-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-indicator.connected {
+            background: #10b981;
+        }
+
+        .setup-section {
+            padding: 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .setup-section h3 {
+            margin-bottom: 15px;
+            color: #1e293b;
+        }
+
+        .setup-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            align-items: end;
+            margin-bottom: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .help-text {
+            font-size: 11px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        input {
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: #3730a3;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .status-message {
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .status-success {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #22c55e;
+        }
+
+        .status-error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #ef4444;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background: #4f46e5;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            background: #f1f5f9;
+            color: #1e293b;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            white-space: pre-wrap;
+        }
+
+        .message.system {
+            background: #fef3c7;
+            color: #92400e;
+            align-self: center;
+            font-size: 14px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .message.error {
+            background: #fef2f2;
+            color: #dc2626;
+            align-self: center;
+            font-size: 14px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 14px;
+            resize: none;
+            min-height: 44px;
+            max-height: 120px;
+        }
+
+        .send-button {
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .loading::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .notion-action {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        .notion-action strong {
+            color: #0284c7;
+        }
+
+        .tool-result {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px;
+            margin: 5px 0;
+            font-size: 12px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>Alune</h1>
+            <p>Your intelligent AI assistant with Notion integration</p>
+            <div class="connection-status">
+                <div class="status-indicator" id="statusIndicator"></div>
+                <span id="statusText">Not connected</span>
+            </div>
+        </div>
+
+        <div class="setup-section" id="setupSection">
+            <h3>Connect Your Services</h3>
+            
+            <div class="setup-grid">
+                <div class="input-group">
+                    <label for="openrouterKey">OpenRouter API Key</label>
+                    <input type="password" id="openrouterKey" placeholder="sk-or-v1-...">
+                    <span class="help-text">Get free API key at openrouter.ai</span>
+                </div>
+                <button onclick="connectOpenRouter()" id="openrouterBtn">Connect AI</button>
+            </div>
+
+            <div class="setup-grid">
+                <div class="input-group">
+                    <label for="notionToken">Notion Integration Token</label>
+                    <input type="password" id="notionToken" placeholder="secret_...">
+                    <span class="help-text">Create integration at developers.notion.com</span>
+                </div>
+                <button onclick="connectNotion()" id="notionBtn">Connect Notion</button>
+            </div>
+
+            <div id="statusMessages"></div>
+        </div>
+
+        <div class="chat-container hidden" id="chatContainer">
+            <div class="messages" id="messages"></div>
+            <div class="input-area">
+                <textarea 
+                    id="messageInput" 
+                    class="message-input" 
+                    placeholder="Ask me anything or request Notion tasks..."
+                    rows="1"
+                ></textarea>
+                <button class="send-button" onclick="sendMessage()" id="sendButton">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let notionToken = localStorage.getItem('notionToken');
+        let openrouterKey = localStorage.getItem('openrouterKey');
+        let conversationHistory = [];
+        let aiConnected = false;
+        let notionConnected = false;
+
+        // Initialize app
+        function init() {
+            if (notionToken) {
+                document.getElementById('notionToken').value = notionToken;
+                testNotionConnection();
+            }
+            if (openrouterKey) {
+                document.getElementById('openrouterKey').value = openrouterKey;
+                testOpenRouterConnection();
+            }
+            
+            // Enter key handling
+            document.getElementById('messageInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+
+        function showStatusMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `status-message status-${type}`;
+            messageDiv.textContent = message;
+            statusDiv.appendChild(messageDiv);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 5000);
+        }
+
+        async function connectOpenRouter() {
+            const key = document.getElementById('openrouterKey').value.trim();
+            if (!key) {
+                showStatusMessage('Please enter your OpenRouter API key', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('openrouterBtn');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            
+            try {
+                const success = await testOpenRouterConnection(key);
+                if (success) {
+                    openrouterKey = key;
+                    localStorage.setItem('openrouterKey', key);
+                    aiConnected = true;
+                    showStatusMessage('OpenRouter connected successfully!', 'success');
+                    btn.textContent = '✓ Connected';
+                    checkIfReadyToChat();
+                } else {
+                    showStatusMessage('Failed to connect to OpenRouter. Check your API key.', 'error');
+                    btn.textContent = 'Connect AI';
+                }
+            } catch (error) {
+                showStatusMessage(`OpenRouter connection error: ${error.message}`, 'error');
+                btn.textContent = 'Connect AI';
+            }
+            
+            btn.disabled = false;
+        }
+
+        async function connectNotion() {
+            const token = document.getElementById('notionToken').value.trim();
+            if (!token) {
+                showStatusMessage('Please enter your Notion integration token', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('notionBtn');
+            btn.disabled = true;
+            btn.textContent = 'Testing...';
+            
+            try {
+                const success = await testNotionConnection(token);
+                if (success) {
+                    notionToken = token;
+                    localStorage.setItem('notionToken', token);
+                    notionConnected = true;
+                    showStatusMessage('Notion connected successfully!', 'success');
+                    btn.textContent = '✓ Connected';
+                    checkIfReadyToChat();
+                } else {
+                    showStatusMessage('Failed to connect to Notion. Check your token and permissions.', 'error');
+                    btn.textContent = 'Connect Notion';
+                }
+            } catch (error) {
+                showStatusMessage(`Notion connection error: ${error.message}`, 'error');
+                btn.textContent = 'Connect Notion';
+            }
+            
+            btn.disabled = false;
+        }
+
+        async function testOpenRouterConnection(key = openrouterKey) {
+            if (!key) return false;
+            
+            try {
+                console.log('Testing OpenRouter connection...');
+                
+                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${key}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'Alune POC'
+                    },
+                    body: JSON.stringify({
+                        model: 'meta-llama/llama-3.1-8b-instruct:free',
+                        messages: [
+                            { role: 'user', content: 'Hello' }
+                        ],
+                        max_tokens: 10
+                    })
+                });
+
+                console.log('OpenRouter test response status:', response.status);
+                
+                if (response.ok) {
+                    console.log('OpenRouter connection successful');
+                    return true;
+                } else {
+                    console.error('OpenRouter test failed:', response.status);
+                    return false;
+                }
+            } catch (error) {
+                console.error('OpenRouter connection test error:', error);
+                return false;
+            }
+        }
+
+        async function testNotionConnection(token = notionToken) {
+            if (!token) return false;
+            
+            try {
+                console.log('Testing Notion connection...');
+                
+                const response = await fetch('https://api.notion.com/v1/users/me', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Notion-Version': '2022-06-28'
+                    }
+                });
+
+                console.log('Notion test response status:', response.status);
+                
+                if (response.ok) {
+                    console.log('Notion connection successful');
+                    return true;
+                } else {
+                    console.error('Notion test failed:', response.status);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Notion connection test error:', error);
+                return false;
+            }
+        }
+
+        function checkIfReadyToChat() {
+            if (aiConnected) {
+                showChat();
+                document.getElementById('statusIndicator').classList.add('connected');
+                document.getElementById('statusText').textContent = notionConnected ? 'AI + Notion Ready' : 'AI Ready';
+                
+                if (notionConnected) {
+                    addMessage('system', 'Perfect! Both AI and Notion are connected. I can help with general questions and manage your Notion workspace.');
+                } else {
+                    addMessage('system', 'AI is connected! I can answer questions and have conversations. Connect Notion for workspace management features.');
+                }
+            }
+        }
+
+        function showChat() {
+            document.getElementById('setupSection').classList.add('hidden');
+            document.getElementById('chatContainer').classList.remove('hidden');
+        }
+
+        function addMessage(type, content) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            if (typeof content === 'object') {
+                messageDiv.innerHTML = content.text;
+                if (content.toolResult) {
+                    const toolDiv = document.createElement('div');
+                    toolDiv.className = 'tool-result';
+                    toolDiv.textContent = `Tool result: ${JSON.stringify(content.toolResult, null, 2)}`;
+                    messageDiv.appendChild(toolDiv);
+                }
+            } else {
+                messageDiv.textContent = content;
+            }
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            if (!aiConnected) {
+                addMessage('error', 'Please connect to OpenRouter first to enable AI responses.');
+                return;
+            }
+            
+            input.value = '';
+            addMessage('user', message);
+            
+            // Add to conversation history
+            conversationHistory.push({ role: 'user', content: message });
+            
+            // Show loading
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant loading';
+            loadingDiv.textContent = 'Thinking';
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.appendChild(loadingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            try {
+                console.log('Sending message to AI:', message);
+                const response = await callAI(message);
+                console.log('AI response received:', response);
+                
+                messagesDiv.removeChild(loadingDiv);
+                
+                // Handle response
+                await handleAIResponse(response);
+                
+            } catch (error) {
+                console.error('Error in sendMessage:', error);
+                messagesDiv.removeChild(loadingDiv);
+                addMessage('error', `Error: ${error.message}`);
+            }
+        }
+
+        async function callAI(message) {
+            const systemPrompt = `You are Alune, an intelligent AI assistant. You can help users with general questions and conversations.
+
+${notionConnected ? `You also have access to the user's Notion workspace through these functions:
+- search_notion: Search for pages in user's Notion workspace
+- create_notion_page: Create a new page with title and content  
+- get_notion_databases: List all databases in workspace
+
+When users request Notion actions, use the appropriate function.` : 'Notion is not connected, so focus on general assistance and conversations.'}
+
+Be helpful, conversational, and natural. If asked about Notion features but Notion isn't connected, explain they need to connect Notion first.`;
+
+            const messages = [
+                { role: 'system', content: systemPrompt },
+                ...conversationHistory
+            ];
+
+            const tools = notionConnected ? [
+                {
+                    type: 'function',
+                    function: {
+                        name: 'search_notion',
+                        description: 'Search for pages in the user\'s Notion workspace',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                query: {
+                                    type: 'string',
+                                    description: 'Search query to find relevant pages'
+                                }
+                            },
+                            required: ['query']
+                        }
+                    }
+                },
+                {
+                    type: 'function',
+                    function: {
+                        name: 'create_notion_page',
+                        description: 'Create a new page in the user\'s Notion workspace',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                title: {
+                                    type: 'string',
+                                    description: 'Title of the new page'
+                                },
+                                content: {
+                                    type: 'string',
+                                    description: 'Content/body of the new page'
+                                }
+                            },
+                            required: ['title', 'content']
+                        }
+                    }
+                },
+                {
+                    type: 'function',
+                    function: {
+                        name: 'get_notion_databases',
+                        description: 'List all databases in the user\'s Notion workspace',
+                        parameters: {
+                            type: 'object',
+                            properties: {}
+                        }
+                    }
+                }
+            ] : undefined;
+
+            try {
+                const requestBody = {
+                    model: 'meta-llama/llama-3.1-8b-instruct:free',
+                    messages: messages,
+                    max_tokens: 1000,
+                    temperature: 0.7
+                };
+
+                if (tools) {
+                    requestBody.tools = tools;
+                }
+
+                const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${openrouterKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'Alune POC'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('OpenRouter API Error:', response.status, errorText);
+                    
+                    if (response.status === 401) {
+                        throw new Error('Invalid OpenRouter API key');
+                    } else if (response.status === 429) {
+                        throw new Error('Rate limit exceeded. Please wait a moment.');
+                    } else {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+                }
+
+                const data = await response.json();
+                console.log('API response data:', data);
+                return data;
+
+            } catch (error) {
+                console.error('API call error:', error);
+                throw error;
+            }
+        }
+
+        async function handleAIResponse(response) {
+            const message = response.choices[0].message;
+            
+            // Add AI message to history
+            conversationHistory.push(message);
+            
+            if (message.tool_calls && message.tool_calls.length > 0 && notionConnected) {
+                // Handle tool calls
+                let allToolResults = [];
+                
+                for (const toolCall of message.tool_calls) {
+                    try {
+                        const result = await executeNotionFunction(toolCall.function);
+                        allToolResults.push({
+                            name: toolCall.function.name,
+                            result: result
+                        });
+                        
+                        // Add tool result to conversation
+                        conversationHistory.push({
+                            role: 'tool',
+                            tool_call_id: toolCall.id,
+                            content: JSON.stringify(result)
+                        });
+                    } catch (error) {
+                        console.error('Tool execution error:', error);
+                        allToolResults.push({
+                            name: toolCall.function.name,
+                            result: { error: error.message }
+                        });
+                    }
+                }
+                
+                // Get final response after tool execution
+                try {
+                    const followUpResponse = await callAIForFollowUp();
+                    addMessage('assistant', followUpResponse.choices[0].message.content);
+                    conversationHistory.push(followUpResponse.choices[0].message);
+                } catch (error) {
+                    // Fallback response if follow-up fails
+                    let responseText = "I completed the following actions:\n\n";
+                    allToolResults.forEach(tr => {
+                        if (tr.name === 'create_notion_page' && tr.result.success) {
+                            responseText += `✅ Created page: "${tr.result.page.title}"\n`;
+                        } else if (tr.name === 'search_notion' && tr.result.success) {
+                            responseText += `🔍 Found ${tr.result.results.length} pages matching your search\n`;
+                        } else if (tr.name === 'get_notion_databases' && tr.result.success) {
+                            responseText += `📊 Found ${tr.result.databases.length} databases in your workspace\n`;
+                        } else if (tr.result.error) {
+                            responseText += `❌ Error in ${tr.name}: ${tr.result.error}\n`;
+                        }
+                    });
+                    addMessage('assistant', responseText);
+                }
+                
+            } else {
+                // Regular text response
+                addMessage('assistant', message.content || "I'm here to help! What would you like to do?");
+            }
+        }
+
+        async function callAIForFollowUp() {
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${openrouterKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': window.location.href,
+                    'X-Title': 'Alune POC'
+                },
+                body: JSON.stringify({
+                    model: 'meta-llama/llama-3.1-8b-instruct:free',
+                    messages: conversationHistory,
+                    max_tokens: 500
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Follow-up API error: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        async function executeNotionFunction(functionCall) {
+            const { name, arguments: args } = functionCall;
+            console.log('Executing Notion function:', name, 'with args:', args);
+            
+            try {
+                const params = JSON.parse(args);
+                
+                switch (name) {
+                    case 'search_notion':
+                        return await searchNotion(params.query);
+                    case 'create_notion_page':
+                        return await createNotionPage(params.title, params.content);
+                    case 'get_notion_databases':
+                        return await getNotionDatabases();
+                    default:
+                        console.error('Unknown function:', name);
+                        return { error: 'Unknown function: ' + name };
+                }
+            } catch (error) {
+                console.error('Error executing Notion function:', error);
+                return { error: error.message };
+            }
+        }
+
+        async function searchNotion(query) {
+            const response = await fetch('https://api.notion.com/v1/search', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${notionToken}`,
+                    'Notion-Version': '2022-06-28',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: query,
+                    filter: {
+                        property: 'object',
+                        value: 'page'
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Notion API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                results: data.results.map(page => ({
+                    id: page.id,
+                    title: page.properties?.title?.title?.[0]?.plain_text || 'Untitled',
+                    url: page.url
+                }))
+            };
+        }
+
+        async function createNotionPage(title, content) {
+            const response = await fetch('https://api.notion.com/v1/pages', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${notionToken}`,
+                    'Notion-Version': '2022-06-28',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    properties: {
+                        title: {
+                            title: [
+                                {
+                                    text: {
+                                        content: title
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    children: [
+                        {
+                            object: 'block',
+                            type: 'paragraph',
+                            paragraph: {
+                                rich_text: [
+                                    {
+                                        type: 'text',
+                                        text: {
+                                            content: content
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`Notion API error: ${response.status} - ${errorData.message}`);
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                page: {
+                    id: data.id,
+                    title: title,
+                    url: data.url
+                }
+            };
+        }
+
+        async function getNotionDatabases() {
+            const response = await fetch('https://api.notion.com/v1/search', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${notionToken}`,
+                    'Notion-Version': '2022-06-28',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filter: {
+                        property: 'object',
+                        value: 'database'
+                    }
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Notion API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                databases: data.results.map(db => ({
+                    id: db.id,
+                    title: db.title?.[0]?.plain_text || 'Untitled Database',
+                    url: db.url
+                }))
+            };
+        }
+
+        // Initialize app when page loads
+        init();
+    </script>
+</body>
+</html>
